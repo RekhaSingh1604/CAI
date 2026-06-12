@@ -85,3 +85,26 @@ tr:hover {
   padding: 8px 15px;
   cursor: pointer;
 }
+th {
+  position: relative;
+  padding: 10px;
+}
+
+.filter-popup {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  z-index: 1000;
+  width: 150px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+  border-radius: 6px;
+}
+
+.filter-popup input {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 5px;
+}

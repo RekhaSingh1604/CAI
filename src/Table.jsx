@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import "./App.css";
+    import { FiFilter } from "react-icons/fi";
 
 function Table() {
+    const [activeFilter, setActiveFilter] = useState(null);
   const [data, setData] = useState([]);
   const [headers, setHeaders] = useState([]);
 
@@ -149,7 +151,7 @@ function Table() {
           </div>
 
           {/* COLUMN FILTERS */}
-          <div className="column-filters">
+          {/* <div className="column-filters">
             {headers.map((h) => (
               <input
                 key={h}
@@ -163,7 +165,7 @@ function Table() {
                 }
               />
             ))}
-          </div>
+          </div> */}
 
           {/* COUNT */}
           <p>
@@ -171,26 +173,55 @@ function Table() {
           </p>
 
           {/* TABLE */}
-          <table border="1">
-            <thead>
-              <tr>
-                {headers.map((h) => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+         {/* TABLE */}
+<table className="table">
+  <thead>
+    <tr>
+      {headers.map((header) => (
+        <th key={header} style={{ position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>{header}</span>
 
-            <tbody>
-              {paginatedData.map((row, i) => (
-                <tr key={i}>
-                  {headers.map((h) => (
-                    <td key={h}>{row[h]}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <FiFilter
+              style={{ cursor: "pointer" }}
+              onClick={() =>
+                setActiveFilter(activeFilter === header ? null : header)
+              }
+            />
+          </div>
 
+          {activeFilter === header && (
+            <div className="filter-popup">
+              <input
+                type="text"
+                placeholder={`Filter ${header}`}
+                value={columnFilters[header] || ""}
+                onChange={(e) =>
+                  setColumnFilters({
+                    ...columnFilters,
+                    [header]: e.target.value,
+                  })
+                }
+              />
+
+              <button onClick={() => setActiveFilter(null)}>Close</button>
+            </div>
+          )}
+        </th>
+      ))}
+    </tr>
+  </thead>
+
+  <tbody>
+    {paginatedData.map((row, index) => (
+      <tr key={index}>
+        {headers.map((h) => (
+          <td key={h}>{row[h]}</td>
+        ))}
+      </tr>
+    ))}
+  </tbody>
+</table>
           {/* PAGINATION */}
           <div className="pagination">
             <button
