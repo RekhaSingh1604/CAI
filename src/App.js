@@ -3,9 +3,9 @@ import Table from './Table'
 import './App.css'
 const App = () => {
   return (
-    <div>
-      <Table />
-    </div>
+    <>
+    <Table/>
+    </>
   )
 }
 

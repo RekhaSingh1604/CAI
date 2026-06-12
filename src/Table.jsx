@@ -1,22 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import "./App.css";
 
 function Table() {
   const [data, setData] = useState([]);
   const [headers, setHeaders] = useState([]);
-  const [filterColumn, setFilterColumn] = useState("");
-  const [filterValue, setFilterValue] = useState("");
+
+  const [columnFilters, setColumnFilters] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
+
   const [sortColumn, setSortColumn] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [currentPage, setCurrentPage] = useState(1);
 
+  const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 20;
 
+  // 📌 Upload CSV
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
 
     if (!file.name.endsWith(".csv")) {
@@ -24,60 +25,78 @@ function Table() {
       return;
     }
 
+    e.target.value = null;
+
+    // reset state
+    setData([]);
+    setHeaders([]);
+    setColumnFilters({});
+    setSearchTerm("");
+    setCurrentPage(1);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        const parsedData = result.data;
+        const parsed = result.data;
 
-        setData(parsedData);
+        setData(parsed);
 
-        if (parsedData.length > 0) {
-          const cols = Object.keys(parsedData[0]);
+        if (parsed.length > 0) {
+          const cols = Object.keys(parsed[0]);
           setHeaders(cols);
-          setFilterColumn(cols[0]);
           setSortColumn(cols[0]);
         }
       },
-      error: () => {
-        alert("Error reading CSV");
-      },
+      error: () => alert("Error reading CSV"),
     });
   };
 
+  // 📌 Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, columnFilters, sortColumn, sortOrder]);
+
+  // 📌 FILTER LOGIC
   let filteredData = [...data];
 
-  // Global Search
+  // Global search
   if (searchTerm) {
     filteredData = filteredData.filter((row) =>
-      headers.some((header) =>
-        String(row[header] || "")
+      headers.some((h) =>
+        String(row[h] || "")
           .toLowerCase()
           .includes(searchTerm.toLowerCase())
       )
     );
   }
 
-  // Column Filter
-  if (filterColumn && filterValue) {
-    filteredData = filteredData.filter((row) =>
-      String(row[filterColumn] || "")
-        .toLowerCase()
-        .includes(filterValue.toLowerCase())
-    );
-  }
+  // Column filters
+  Object.keys(columnFilters).forEach((key) => {
+    const value = columnFilters[key];
 
-  // Sorting
-  filteredData.sort((a, b) => {
-    const valA = a[sortColumn] || "";
-    const valB = b[sortColumn] || "";
-
-    return sortOrder === "asc"
-      ? String(valA).localeCompare(String(valB))
-      : String(valB).localeCompare(String(valA));
+    if (value) {
+      filteredData = filteredData.filter((row) =>
+        String(row[key] || "")
+          .toLowerCase()
+          .includes(value.toLowerCase())
+      );
+    }
   });
 
-  // Pagination
+  // SORT
+  if (sortColumn) {
+    filteredData.sort((a, b) => {
+      const A = a[sortColumn] || "";
+      const B = b[sortColumn] || "";
+
+      return sortOrder === "asc"
+        ? String(A).localeCompare(String(B))
+        : String(B).localeCompare(String(A));
+    });
+  }
+
+  // PAGINATION
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   const startIndex = (currentPage - 1) * rowsPerPage;
@@ -89,121 +108,105 @@ function Table() {
 
   const clearFilters = () => {
     setSearchTerm("");
-    setFilterValue("");
-    setCurrentPage(1);
+    setColumnFilters({});
   };
 
   return (
     <div className="container">
       <h1>CSV Data Viewer</h1>
 
-      <div className="upload-box">
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleFileUpload}
-        />
-      </div>
+      {/* UPLOAD */}
+      <input type="file" accept=".csv" onChange={handleFileUpload} />
 
       {headers.length > 0 && (
         <>
+          {/* CONTROLS */}
           <div className="controls">
             <input
-              type="text"
               placeholder="Global Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
 
             <select
-              value={filterColumn}
-              onChange={(e) => setFilterColumn(e.target.value)}
-            >
-              {headers.map((header) => (
-                <option key={header}>{header}</option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="Filter Value"
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-            />
-
-            <select
               value={sortColumn}
               onChange={(e) => setSortColumn(e.target.value)}
             >
-              {headers.map((header) => (
-                <option key={header}>{header}</option>
+              {headers.map((h) => (
+                <option key={h}>{h}</option>
               ))}
             </select>
 
             <button
               onClick={() =>
-                setSortOrder(
-                  sortOrder === "asc" ? "desc" : "asc"
-                )
+                setSortOrder((p) => (p === "asc" ? "desc" : "asc"))
               }
             >
-              {sortOrder === "asc"
-                ? "Ascending"
-                : "Descending"}
+              {sortOrder === "asc" ? "ASC" : "DESC"}
             </button>
 
-            <button onClick={clearFilters}>
-              Clear Filters
-            </button>
+            <button onClick={clearFilters}>Clear Filters</button>
           </div>
 
-          <p className="record-count">
+          {/* COLUMN FILTERS */}
+          <div className="column-filters">
+            {headers.map((h) => (
+              <input
+                key={h}
+                placeholder={`Filter ${h}`}
+                value={columnFilters[h] || ""}
+                onChange={(e) =>
+                  setColumnFilters({
+                    ...columnFilters,
+                    [h]: e.target.value,
+                  })
+                }
+              />
+            ))}
+          </div>
+
+          {/* COUNT */}
+          <p>
             Showing {filteredData.length} of {data.length} records
           </p>
 
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  {headers.map((header) => (
-                    <th key={header}>{header}</th>
+          {/* TABLE */}
+          <table border="1">
+            <thead>
+              <tr>
+                {headers.map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {paginatedData.map((row, i) => (
+                <tr key={i}>
+                  {headers.map((h) => (
+                    <td key={h}>{row[h]}</td>
                   ))}
                 </tr>
-              </thead>
+              ))}
+            </tbody>
+          </table>
 
-              <tbody>
-                {paginatedData.map((row, index) => (
-                  <tr key={index}>
-                    {headers.map((header) => (
-                      <td key={header}>
-                        {row[header]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
+          {/* PAGINATION */}
           <div className="pagination">
             <button
               disabled={currentPage === 1}
-              onClick={() =>
-                setCurrentPage((prev) => prev - 1)
-              }
+              onClick={() => setCurrentPage((p) => p - 1)}
             >
               Prev
             </button>
 
             <span>
-              Page {currentPage} of {totalPages}
+              Page {currentPage} of {totalPages || 1}
             </span>
 
             <button
               disabled={currentPage === totalPages}
-              onClick={() =>
-                setCurrentPage((prev) => prev + 1)
-              }
+              onClick={() => setCurrentPage((p) => p + 1)}
             >
               Next
             </button>
